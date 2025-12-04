@@ -1,0 +1,68 @@
+services:
+  # PostgreSQL Database Instance
+  - type: pserv
+    name: sentinel-rx-postgres
+    env: docker
+    plan: free
+    region: oregon
+    databases:
+      - name: sentinel_rx
+        user: sentinel_user
+
+  # Redis Cache
+  - type: redis
+    name: sentinel-rx-redis
+    plan: free
+    region: oregon
+    ipAllowList: []
+    maxmemoryPolicy: allkeys-lru
+
+  # Web Service (Backend API)
+  - type: web
+    name: sentinel-rx-api
+    env: docker
+    plan: free
+    region: oregon
+    branch: main
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sentinel-rx-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: sentinel-rx-redis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: CORS_ORIGINS
+        value: '["*"]'
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: LOG_LEVEL
+        value: INFO
+      - key: WORKERS
+        value: "2"
+      - key: HOST
+        value: "0.0.0.0"
+      - key: PORT
+        value: "8000"
+      - key: APP_NAME
+        value: Sentinel-RX
+      - key: APP_VERSION
+        value: "0.1.0"
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: "7"
