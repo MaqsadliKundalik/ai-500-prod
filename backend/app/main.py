@@ -1,0 +1,188 @@
+"""
+Sentinel-RX Main Application
+============================
+FastAPI application factory and configuration
+"""
+
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.exceptions import RequestValidationError
+from sqlalchemy.exc import SQLAlchemyError
+
+from app.core.config import settings
+from app.api.v1.router import api_router
+from app.core.logging_config import setup_logging
+from app.core.middleware import RequestLoggingMiddleware
+from app.core.error_handlers import (
+    sentinel_rx_exception_handler,
+    validation_exception_handler,
+    sqlalchemy_exception_handler,
+    generic_exception_handler
+)
+from app.core.exceptions import SentinelRXException
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Application lifespan handler for startup and shutdown events.
+    """
+    # Startup
+    setup_logging(
+        level=settings.log_level,
+        log_file="logs/sentinel_rx.log",
+        json_format=(settings.environment == "production")
+    )
+    
+    print(f"🚀 Starting {settings.app_name} v{settings.app_version}")
+    print(f"📍 Environment: {settings.environment}")
+    print(f"🔗 Database: {settings.database_url.split('@')[-1] if '@' in settings.database_url else 'configured'}")
+    
+    # Initialize services, connections, ML models here
+    # await init_database()
+    # await init_redis()
+    # await load_ml_models()
+    
+    yield
+    
+    # Shutdown
+    print(f"👋 Shutting down {settings.app_name}")
+    # Close connections, cleanup resources
+    # await close_database()
+    # await close_redis()
+
+
+def create_application() -> FastAPI:
+    """
+    Application factory - creates and configures FastAPI app.
+    
+    Returns:
+        Configured FastAPI application instance
+    """
+    app = FastAPI(
+        title=settings.app_name,
+        description="""
+        🏥 **Sentinel-RX API** - AI-powered Medication Safety Platform
+        
+        ## Features
+        
+        * 📸 **Visual Pill Recognition** - Scan medications with camera
+        * 💊 **Drug Interaction Detection** - Check for dangerous combinations
+        * 💰 **Price Anomaly Detection** - Find overpriced medications
+        * 🗺️ **Pharmacy Finder** - Locate nearest legitimate pharmacies
+        * 🎤 **Voice Assistant** - Uzbek/Russian/English support
+        * 👨‍👩‍👧 **Family Dashboard** - Monitor family medication adherence
+        * 🎮 **Gamification** - Rewards for medication compliance
+        * ✈️ **Medical Tourism** - Multi-currency, translation support
+        
+        ## Authentication
+        
+        All protected endpoints require JWT Bearer token.
+        Use `/api/v1/auth/login` to obtain tokens.
+        """,
+        version=settings.app_version,
+        openapi_url="/api/openapi.json" if settings.debug else None,
+        docs_url="/api/docs" if settings.debug else None,
+        redoc_url="/api/redoc" if settings.debug else None,
+        lifespan=lifespan
+    )
+    
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=settings.cors_allow_credentials,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
+    # Add request logging middleware
+    app.add_middleware(RequestLoggingMiddleware)
+    
+    # Add GZip compression
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
+    
+    # Add exception handlers
+    app.add_exception_handler(SentinelRXException, sentinel_rx_exception_handler)
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
+    app.add_exception_handler(Exception, generic_exception_handler)
+    
+    # Include API router
+    app.include_router(api_router, prefix="/api/v1")
+    
+    # Root endpoint
+    @app.get("/", tags=["Health"])
+    async def root():
+        """Root endpoint - API health check."""
+        return {
+            "name": settings.app_name,
+            "version": settings.app_version,
+            "status": "healthy",
+            "environment": settings.environment,
+            "docs": "/api/docs" if settings.debug else "disabled"
+        }
+    
+    @app.get("/health", tags=["Health"])
+    async def health_check():
+        """Detailed health check endpoint."""
+        from app.db.session import async_session_maker
+        from sqlalchemy import text
+        from pathlib import Path
+        
+        # Check database connection
+        db_status = "disconnected"
+        db_latency = None
+        try:
+            import time
+            start = time.time()
+            async with async_session_maker() as session:
+                await session.execute(text("SELECT 1"))
+            db_latency = round((time.time() - start) * 1000, 2)  # ms
+            db_status = "connected"
+        except Exception as e:
+            db_status = f"error: {str(e)[:50]}"
+        
+        # Check Redis connection
+        redis_status = "not_configured"
+        try:
+            import redis as redis_client
+            r = redis_client.Redis(host='redis', port=6379, db=0, socket_connect_timeout=1)
+            r.ping()
+            redis_status = "connected"
+        except:
+            redis_status = "not_configured"
+        
+        # Check AI models
+        ai_models = {
+            "pill_recognition": Path("models/pill_recognition.pt").exists(),
+            "drug_interaction": Path("models/drug_interaction.pkl").exists(),
+            "price_anomaly": Path("models/price_anomaly.pkl").exists()
+        }
+        models_loaded = sum(ai_models.values())
+        ai_status = f"{models_loaded}/3 models available"
+        
+        return {
+            "status": "healthy" if db_status == "connected" else "degraded",
+            "database": {
+                "status": db_status,
+                "latency_ms": db_latency
+            },
+            "redis": {
+                "status": redis_status
+            },
+            "ai_models": {
+                "status": ai_status,
+                "details": ai_models
+            },
+            "version": settings.app_version,
+            "environment": settings.environment
+        }
+    
+    return app
+
+
+# Create application instance
+app = create_application()
