@@ -43,7 +43,7 @@ services:
       - key: LOG_LEVEL
         value: INFO
       - key: WORKERS
-        value: "1"
+        value: "4"
       - key: HOST
         value: "0.0.0.0"
       - key: PORT
