@@ -83,9 +83,9 @@ def create_application() -> FastAPI:
         Use `/api/v1/auth/login` to obtain tokens.
         """,
         version=settings.app_version,
-        openapi_url="/api/openapi.json" if settings.debug else None,
-        docs_url="/api/docs" if settings.debug else None,
-        redoc_url="/api/redoc" if settings.debug else None,
+        openapi_url="/api/openapi.json",
+        docs_url="/api/docs",
+        redoc_url="/api/redoc",
         lifespan=lifespan
     )
     
