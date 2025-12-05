@@ -16,12 +16,12 @@ services:
   # Web Service (Backend API)
   - type: web
     name: sentinel-rx-api
-    env: docker
+    runtime: docker
     plan: free
     region: oregon
     branch: main
-    rootDir: backend
-    dockerfilePath: Dockerfile
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     healthCheckPath: /health
     autoDeploy: true
     envVars:
