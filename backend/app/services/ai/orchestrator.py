@@ -15,7 +15,10 @@ from app.services.pharmacy_service import PharmacyService
 from app.services.ai.models import (
     PillRecognizer,
     DrugInteractionDetector,
-    PriceAnomalyDetector
+    PriceAnomalyDetector,
+    PILL_RECOGNITION_AVAILABLE,
+    INTERACTION_DETECTOR_AVAILABLE,
+    PRICE_ANOMALY_AVAILABLE
 )
 
 logger = logging.getLogger(__name__)
@@ -35,33 +38,42 @@ class AIOrchestrator:
         self.interaction_service = InteractionService(db)
         self.pharmacy_service = PharmacyService(db)
         
-        # Initialize AI models
-        try:
-            self.pill_recognizer = PillRecognizer(
-                model_path="models/pill_recognition.pt"
-            )
-            logger.info("✅ Pill recognizer initialized")
-        except Exception as e:
-            logger.warning(f"⚠️  Pill recognizer init failed: {e}")
-            self.pill_recognizer = None
+        # Initialize AI models (optional for production)
+        self.pill_recognizer = None
+        if PILL_RECOGNITION_AVAILABLE:
+            try:
+                self.pill_recognizer = PillRecognizer(
+                    model_path="models/pill_recognition.pt"
+                )
+                logger.info("✅ Pill recognizer initialized")
+            except Exception as e:
+                logger.warning(f"⚠️  Pill recognizer init failed: {e}")
+        else:
+            logger.info("ℹ️  Pill recognition unavailable (torch not installed)")
         
-        try:
-            self.interaction_detector = DrugInteractionDetector(
-                model_path="models/drug_interaction.pkl"
-            )
-            logger.info("✅ Interaction detector initialized")
-        except Exception as e:
-            logger.warning(f"⚠️  Interaction detector init failed: {e}")
-            self.interaction_detector = None
+        self.interaction_detector = None
+        if INTERACTION_DETECTOR_AVAILABLE:
+            try:
+                self.interaction_detector = DrugInteractionDetector(
+                    model_path="models/drug_interaction.pkl"
+                )
+                logger.info("✅ Interaction detector initialized")
+            except Exception as e:
+                logger.warning(f"⚠️  Interaction detector init failed: {e}")
+        else:
+            logger.info("ℹ️  Interaction detector unavailable (ML libraries not installed)")
         
-        try:
-            self.price_anomaly_detector = PriceAnomalyDetector(
-                model_path="models/price_anomaly.pkl"
-            )
-            logger.info("✅ Price anomaly detector initialized")
-        except Exception as e:
-            logger.warning(f"⚠️  Price anomaly detector init failed: {e}")
-            self.price_anomaly_detector = None
+        self.price_anomaly_detector = None
+        if PRICE_ANOMALY_AVAILABLE:
+            try:
+                self.price_anomaly_detector = PriceAnomalyDetector(
+                    model_path="models/price_anomaly.pkl"
+                )
+                logger.info("✅ Price anomaly detector initialized")
+            except Exception as e:
+                logger.warning(f"⚠️  Price anomaly detector init failed: {e}")
+        else:
+            logger.info("ℹ️  Price anomaly detector unavailable (ML libraries not installed)")
     
     async def process_scan(
         self,
