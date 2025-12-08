@@ -5,8 +5,9 @@ Medication database, search, details
 """
 
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel
 
 from app.core.dependencies import get_db, get_current_active_user, get_optional_user_id
 from app.schemas.medication import (
@@ -17,6 +18,7 @@ from app.schemas.medication import (
     UserMedicationResponse
 )
 from app.services.medication_service import MedicationService
+from app.services.ai.price_anomaly_service import get_price_anomaly_service
 
 router = APIRouter()
 
@@ -147,3 +149,86 @@ async def remove_medication_from_my_list(
     medication_service = MedicationService(db)
     await medication_service.remove_from_user_list(current_user.id, user_medication_id)
     return {"message": "Medication removed from list"}
+
+
+class PriceCheckRequest(BaseModel):
+    """Request model for price anomaly detection."""
+    medicine_name: str
+    region: str
+    pharmacy: str
+    current_price: float
+    inn: Optional[str] = ""
+    atx_code: Optional[str] = ""
+    base_price: Optional[float] = None
+
+
+@router.post("/check-price")
+async def check_price_anomaly(
+    request: PriceCheckRequest = Body(...)
+):
+    """
+    Check if a medicine price is anomalous.
+    
+    Uses AI models (Isolation Forest + Autoencoder) to detect:
+    - Overpriced medications
+    - Underpriced medications (potential counterfeits)
+    - Unusual price patterns
+    
+    Returns anomaly score, confidence, and regional price comparison.
+    """
+    try:
+        service = get_price_anomaly_service()
+        result = service.detect_anomaly(
+            medicine_name=request.medicine_name,
+            region=request.region,
+            pharmacy=request.pharmacy,
+            current_price=request.current_price,
+            inn=request.inn,
+            atx_code=request.atx_code,
+            base_price=request.base_price
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error checking price: {str(e)}"
+        )
+
+
+@router.get("/regional-prices/{medication_id}")
+async def get_regional_price_comparison(
+    medication_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get regional price comparison for a medication.
+    
+    Returns expected price ranges across different regions of Uzbekistan.
+    """
+    medication_service = MedicationService(db)
+    medication = await medication_service.get_by_id(medication_id)
+    
+    if not medication:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Medication not found"
+        )
+    
+    # Get base price (assuming it's stored in the medication)
+    base_price = getattr(medication, 'price', 0)
+    
+    if base_price <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Base price not available for this medication"
+        )
+    
+    service = get_price_anomaly_service()
+    result = service.compare_regional_prices(
+        medicine_name=medication.name,
+        inn=getattr(medication, 'inn', ''),
+        atx_code=getattr(medication, 'atx_code', ''),
+        base_price=base_price
+    )
+    
+    return result
