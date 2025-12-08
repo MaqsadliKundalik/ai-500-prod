@@ -58,8 +58,8 @@ logs/
 uploads/
 media/
 
-# Models (large files)
-models/*.pt
+# Models (large files - temporarily allowing .pt for deployment)
+# models/*.pt
 models/*.pth
 models/*.onnx
 !models/.gitkeep
