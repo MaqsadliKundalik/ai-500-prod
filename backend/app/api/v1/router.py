@@ -16,6 +16,7 @@ from app.api.v1.endpoints import (
     voice,
     dashboard,
     gamification,
+    test_model,
 )
 
 api_router = APIRouter()
@@ -81,4 +82,11 @@ api_router.include_router(
     gamification.router,
     prefix="/gamification",
     tags=["Gamification"]
+)
+
+# Test/Development endpoints
+api_router.include_router(
+    test_model.router,
+    prefix="/dev",
+    tags=["Development"]
 )

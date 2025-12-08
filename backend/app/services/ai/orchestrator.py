@@ -21,6 +21,28 @@ from app.services.ai.models import (
     PRICE_ANOMALY_AVAILABLE
 )
 
+# Import multi-modal components
+try:
+    from app.services.ai.models.pill_recognition_multi_modal import (
+        MultiModalPillRecognizer,
+        PillFeatures,
+        VerificationLevel
+    )
+    from app.services.ai.pill_database_service import PillDatabaseService
+    from app.services.ai.ocr_service import PillOCRService
+    MULTI_MODAL_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"⚠️  Multi-modal recognition unavailable: {e}")
+    MULTI_MODAL_AVAILABLE = False
+
+# Import trained production model
+try:
+    from app.services.ai.production_pill_recognizer import get_recognizer
+    PRODUCTION_MODEL_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"⚠️  Production model unavailable: {e}")
+    PRODUCTION_MODEL_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -38,7 +60,30 @@ class AIOrchestrator:
         self.interaction_service = InteractionService(db)
         self.pharmacy_service = PharmacyService(db)
         
-        # Initialize AI models (optional for production)
+        # Initialize multi-modal pill recognizer (NEW!)
+        self.multi_modal_recognizer = None
+        if MULTI_MODAL_AVAILABLE:
+            try:
+                pill_db_service = PillDatabaseService(db)
+                ocr_service = PillOCRService(backend='easyocr')
+                
+                # Initialize with visual model if available
+                visual_model = None
+                if PILL_RECOGNITION_AVAILABLE:
+                    visual_model = PillRecognizer(model_path="models/pill_recognition.pt")
+                
+                self.multi_modal_recognizer = MultiModalPillRecognizer(
+                    visual_model=visual_model,
+                    ocr_model=ocr_service,
+                    database=pill_db_service
+                )
+                logger.info("✅ Multi-modal pill recognizer initialized")
+            except Exception as e:
+                logger.warning(f"⚠️  Multi-modal recognizer init failed: {e}")
+        else:
+            logger.info("ℹ️  Multi-modal recognition unavailable")
+        
+        # Legacy pill recognizer (fallback)
         self.pill_recognizer = None
         if PILL_RECOGNITION_AVAILABLE:
             try:
@@ -74,6 +119,15 @@ class AIOrchestrator:
                 logger.warning(f"⚠️  Price anomaly detector init failed: {e}")
         else:
             logger.info("ℹ️  Price anomaly detector unavailable (ML libraries not installed)")
+        
+        # Initialize trained production model
+        self.production_recognizer = None
+        if PRODUCTION_MODEL_AVAILABLE:
+            try:
+                self.production_recognizer = get_recognizer()
+                logger.info("✅ Production pill recognizer loaded")
+            except Exception as e:
+                logger.warning(f"⚠️  Production model init failed: {e}")
     
     async def process_scan(
         self,
@@ -308,7 +362,80 @@ class AIOrchestrator:
     
     async def _recognize_pill(self, image_data: bytes) -> Dict[str, Any]:
         """
-        Model 1: Visual Pill Recognition using CNN.
+        Model 1: Multi-Modal Pill Recognition (5-step verification).
+        
+        Returns dict with recognition results and safety warnings.
+        """
+        
+        # Check if multi-modal recognizer available
+        if not self.multi_modal_recognizer:
+            logger.warning("Multi-modal recognizer not available, using legacy fallback")
+            return await self._recognize_pill_legacy(image_data)
+        
+        try:
+            from PIL import Image
+            import io
+            
+            # Load image
+            image = Image.open(io.BytesIO(image_data))
+            
+            # Extract pill features (this would normally come from image processing)
+            # For now, use placeholder - in production, use OpenCV + deep learning
+            features = await self._extract_pill_features(image)
+            
+            # Run multi-modal recognition
+            result = await self.multi_modal_recognizer.recognize_pill(
+                image=image,
+                features=features,
+                user_context=None  # TODO: Get user context if authenticated
+            )
+            
+            # Convert to orchestrator format
+            return {
+                "recognized": result.verification_level not in [
+                    VerificationLevel.UNVERIFIED,
+                    VerificationLevel.CRITICAL
+                ],
+                "medication_id": result.medication_id,
+                "medication_name": result.medication_name,
+                "confidence": result.overall_confidence,
+                "verification_level": result.verification_level.value,
+                "verifications_passed": result.verifications_passed,
+                "verifications_total": result.verifications_total,
+                
+                # Verification details
+                "visual_verification": result.visual_verification.to_dict() if result.visual_verification else None,
+                "imprint_verification": result.imprint_verification.to_dict() if result.imprint_verification else None,
+                "size_verification": result.size_verification.to_dict() if result.size_verification else None,
+                "database_verification": result.database_verification.to_dict() if result.database_verification else None,
+                
+                # Safety warnings
+                "warnings": result.warnings,
+                "critical_warning": result.critical_warning,
+                "similar_medications": result.similar_medications,
+                "requires_pharmacist": result.requires_pharmacist,
+                
+                # User confirmation
+                "user_confirmation": self.multi_modal_recognizer.request_user_confirmation(result),
+                
+                # Metadata
+                "processing_time_ms": result.processing_time_ms,
+                "timestamp": result.timestamp
+            }
+            
+        except Exception as e:
+            logger.error(f"Multi-modal pill recognition failed: {e}", exc_info=True)
+            return {
+                "recognized": False,
+                "medication_id": None,
+                "confidence": 0.0,
+                "error": str(e),
+                "warnings": ["⚠️ Recognition system error. Please try again or consult pharmacist."]
+            }
+    
+    async def _recognize_pill_legacy(self, image_data: bytes) -> Dict[str, Any]:
+        """
+        Legacy pill recognition (fallback without multi-modal).
         """
         if not self.pill_recognizer:
             logger.warning("Pill recognizer not available, using fallback")
@@ -376,6 +503,39 @@ class AIOrchestrator:
             "confidence": 0.0,
             "alternatives": []
         }
+    
+    async def _extract_pill_features(self, image: "Image.Image") -> "PillFeatures":
+        """
+        Extract physical features from pill image.
+        
+        In production, this would use:
+        - Deep learning for shape/color detection
+        - OCR for imprint reading
+        - Computer vision for size estimation
+        
+        For now, returns placeholder features.
+        """
+        from app.services.ai.models.pill_recognition_multi_modal import PillFeatures
+        
+        # Placeholder - in production, use actual image processing
+        features = PillFeatures(
+            shape='round',
+            color_primary='white',
+            has_imprint=False,
+            imprint_text=None
+        )
+        
+        # Try to extract imprint using OCR service
+        if self.multi_modal_recognizer and self.multi_modal_recognizer.ocr_model:
+            try:
+                ocr_result = await self.multi_modal_recognizer.ocr_model.extract_imprint(image)
+                if ocr_result and ocr_result.confidence > 0.5:
+                    features.has_imprint = True
+                    features.imprint_text = ocr_result.text
+            except Exception as e:
+                logger.warning(f"OCR extraction failed: {e}")
+        
+        return features
     
     async def _generate_personalized_insights(
         self,

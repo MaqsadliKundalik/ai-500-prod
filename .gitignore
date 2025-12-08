@@ -1,0 +1,40 @@
+# Large files and local data
+backend/models/*.pt
+backend/models/*.pkl
+backend/datasets/
+backend/myenv/
+backend/uploads/
+backend/*.db
+backend/*.sqlite
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+.env.local
+*.log
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/

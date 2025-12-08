@@ -25,7 +25,21 @@ Uzbekistan faces critical medication safety challenges:
 ## ✨ Key Features
 
 ### 🔬 AI-Powered Core
-- **Visual Pill Recognition** - CNN identifies medications from photos
+- **Multi-Modal Pill Recognition** - 5-step verification (Visual CNN + Imprint OCR + Size + Database + User Confirmation) [NEW! 🎉]
+  - Visual AI: 25% weight - EfficientNet-B0 CNN
+  - Imprint OCR: 40% weight - Most reliable identifier
+  - Size Measurement: 20% weight
+  - Database Cross-Reference: 15% weight
+  - User Confirmation: Final safety check
+  - **Safety-First**: Prevents dangerous mix-ups (e.g., Aspirin vs Paracetamol)
+  - **Training Data**: DailyMed (FDA database) with 100,000+ medications [NEW! 🎉]
+  - See [MULTI_MODAL_PILL_RECOGNITION.md](MULTI_MODAL_PILL_RECOGNITION.md) for details
+  - See [TRAINING_WITH_DAILYMED.md](TRAINING_WITH_DAILYMED.md) for training guide
+- **DailyMed Integration** - Official FDA database integration [NEW! 🎉]
+  - Real-time verification against FDA database
+  - Automatic data enrichment (imprints, images, warnings)
+  - "FDA Verified ✅" badges
+  - See [DAILYMED_INTEGRATION.md](DAILYMED_INTEGRATION.md) for details
 - **Drug Interaction Detection** - Random Forest ML model (87.5% accuracy)
 - **Price Anomaly Detection** - Isolation Forest finds overpriced meds
 - **Voice Assistant** - Multilingual (Uzbek/Russian/English) using Whisper STT

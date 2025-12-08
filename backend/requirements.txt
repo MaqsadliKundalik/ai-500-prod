@@ -75,3 +75,8 @@ flake8==6.1.0
 # Image Processing
 Pillow==10.1.0
 opencv-python==4.8.1.78
+
+# OCR for Multi-Modal Pill Recognition
+easyocr==1.7.1  # Recommended for pill imprint reading
+pytesseract==0.3.10  # Alternative OCR backend
+# paddleocr==2.7.0  # Optional: High-accuracy OCR (larger dependency)
