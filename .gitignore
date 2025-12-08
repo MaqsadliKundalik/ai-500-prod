@@ -1,5 +1,4 @@
 # Large files and local data
-backend/models/*.pt
 backend/models/*.pkl
 backend/datasets/
 backend/myenv/
