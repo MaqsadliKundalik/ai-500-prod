@@ -21,6 +21,9 @@ from app.services.ai.models import (
     PRICE_ANOMALY_AVAILABLE
 )
 
+# Initialize logger first
+logger = logging.getLogger(__name__)
+
 # Import multi-modal components
 try:
     from app.services.ai.models.pill_recognition_multi_modal import (
@@ -42,8 +45,6 @@ try:
 except ImportError as e:
     logger.warning(f"⚠️  Production model unavailable: {e}")
     PRODUCTION_MODEL_AVAILABLE = False
-
-logger = logging.getLogger(__name__)
 
 
 class AIOrchestrator:
