@@ -161,7 +161,15 @@ class AIOrchestrator:
                 "scanned_at": datetime.utcnow(),
                 "recognized": False,
                 "medication": None,
-                "confidence": 0.0,
+                "confidence": recognition_result.get("confidence", 0.0),
+                "error_message": "Dori tanilmadi. Iltimos, quyidagilarni sinab ko'ring:",
+                "suggestions": [
+                    "📸 Dori tabletkasini boshqa burchakdan suratga oling",
+                    "💡 Yorug'lik yaxshi bo'lgan joyda suratga oling",
+                    "🔍 Dori nomini qidiruv orqali toping (Qidiruv menyusi)",
+                    "📦 Dori qutisidagi shtrix-kodni skanerlang",
+                    "📝 Qo'lda dori nomini kiriting"
+                ],
                 "interactions": {"has_interactions": False, "total_count": 0, "severe_count": 0, "interactions": []},
                 "price_analysis": {},
                 "nearby_pharmacies": [],
@@ -183,6 +191,12 @@ class AIOrchestrator:
                 "recognized": False,
                 "medication": None,
                 "confidence": recognition_result["confidence"],
+                "error_message": "Dori AI model tomonidan tanildi lekin ma'lumotlar bazasida topilmadi",
+                "suggestions": [
+                    "🔍 Qidiruv orqali shunga o'xshash dorilarni ko'ring",
+                    "📞 Dorixonaga murojaat qiling",
+                    "📧 Bizga xabar bering - dorini qo'shamiz"
+                ],
                 "interactions": {"has_interactions": False, "total_count": 0, "severe_count": 0, "interactions": []},
                 "price_analysis": {},
                 "nearby_pharmacies": [],
@@ -287,7 +301,29 @@ class AIOrchestrator:
         medication = await self.medication_service.get_by_id(medication_id)
         
         if not medication:
-            return {"error": "Medication not found"}
+            return {
+                "scan_id": "scan_" + str(datetime.utcnow().timestamp()),
+                "scan_type": "qr",
+                "scanned_at": datetime.utcnow(),
+                "recognized": False,
+                "medication": None,
+                "confidence": 0.0,
+                "error_message": "Shtrix-kod yoki QR kod o'qildi lekin dori topilmadi",
+                "suggestions": [
+                    "🔍 Dori nomini qidiruv orqali toping",
+                    "📸 Dori tabletkasini rasmga oling",
+                    "📞 Dorixonaga murojaat qiling",
+                    "✉️ Bizga xabar bering - bu dorini qo'shamiz"
+                ],
+                "qr_code_data": medication_id,
+                "interactions": {"has_interactions": False, "total_count": 0, "severe_count": 0, "interactions": []},
+                "price_analysis": {},
+                "nearby_pharmacies": [],
+                "batch_recall": {"is_recalled": False},
+                "personalized_insights": [],
+                "points_earned": 1,
+                "alternatives": []
+            }
         
         # Similar to process_scan but skip recognition
         scan_id = "scan_" + str(datetime.utcnow().timestamp())
@@ -460,7 +496,43 @@ class AIOrchestrator:
                 # Run prediction
                 predictions = self.pill_recognizer.predict(tmp_path, top_k=3)
                 
-                if predictions and predictions[0]['confidence'] > 0.3:
+                # Check if any predictions found
+                if not predictions or len(predictions) == 0:
+                    return {
+                        "recognized": False,
+                        "medication_id": None,
+                        "confidence": 0.0,
+                        "error_message": "Rasmda dori tabletkasi aniqlanmadi",
+                        "suggestions": [
+                            "📸 Dori tabletkasini markazda joylashtiring",
+                            "💡 Yorqinroq joyda suratga oling",
+                            "🔍 Fon oddiy rangda bo'lsin (masalan oq)",
+                            "📏 Kameraga yaqinroq oling"
+                        ],
+                        "alternatives": []
+                    }
+                
+                # Check confidence threshold (minimum 0.3 = 30%)
+                best_confidence = predictions[0]['confidence']
+                
+                if best_confidence < 0.3:
+                    return {
+                        "recognized": False,
+                        "medication_id": None,
+                        "confidence": best_confidence,
+                        "error_message": f"Ishonch darajasi juda past ({best_confidence*100:.1f}%). Bu dori emasligi mumkin.",
+                        "suggestions": [
+                            "❓ Bu dori tabletkasimi? Agar yo'q bo'lsa, dori rasmini yuklang",
+                            "📸 Aniqroq surat yuklang (blur bo'lmasin)",
+                            "☀️ Yorug'lik yaxshi bo'lgan joyda suratga oling",
+                            "🔄 Tabletkani ag'daring va boshqa tomondan suratga oling",
+                            "🔍 Qidiruv orqali dori nomini kiriting"
+                        ],
+                        "alternatives": []
+                    }
+                
+                # Confidence acceptable, search for medication
+                if best_confidence >= 0.3:
                     # Search for matching medication in database
                     best_match = predictions[0]
                     

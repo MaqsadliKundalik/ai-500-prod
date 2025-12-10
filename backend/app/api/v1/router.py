@@ -17,6 +17,7 @@ from app.api.v1.endpoints import (
     dashboard,
     gamification,
     test_model,
+    ai_enhancements,
 )
 
 api_router = APIRouter()
@@ -89,4 +90,11 @@ api_router.include_router(
     test_model.router,
     prefix="/dev",
     tags=["Development"]
+)
+
+# AI Enhancements endpoints
+api_router.include_router(
+    ai_enhancements.router,
+    prefix="/ai",
+    tags=["AI Enhancements"]
 )

@@ -114,6 +114,9 @@ def decode_token(token: str) -> Optional[dict]:
         
     Returns:
         Decoded payload or None if invalid
+        
+    Raises:
+        HTTPException: For specific token errors
     """
     try:
         payload = jwt.decode(
@@ -122,8 +125,30 @@ def decode_token(token: str) -> Optional[dict]:
             algorithms=[settings.algorithm]
         )
         return payload
-    except JWTError:
-        return None
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired. Please login again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token. Authentication failed.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except jwt.DecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token decode error. Malformed token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Token validation error: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 def verify_token(token: str, token_type: str = "access") -> Optional[str]:
@@ -135,17 +160,37 @@ def verify_token(token: str, token_type: str = "access") -> Optional[str]:
         token_type: Expected token type ("access" or "refresh")
         
     Returns:
-        User ID (subject) if valid, None otherwise
+        User ID (subject) if valid
+        
+    Raises:
+        HTTPException: For invalid tokens
     """
-    payload = decode_token(token)
+    if not token or token.strip() == "":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token is required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     
-    if payload is None:
-        return None
+    payload = decode_token(token)  # This will raise HTTPException if invalid
     
+    # Verify token type
     if payload.get("type") != token_type:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid token type. Expected {token_type} token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     
+    # Extract user ID
     user_id: str = payload.get("sub")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload. Missing user ID.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
     return user_id
 
 

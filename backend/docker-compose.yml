@@ -15,8 +15,11 @@ services:
     volumes:
       - .:/app
       - ./uploads:/app/uploads
+      - ./models:/app/models
     command: >
       sh -c "alembic upgrade head && 
+             python app/scripts/seed_data.py &&
+             python app/scripts/seed_ai_enhancements.py &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
   db:

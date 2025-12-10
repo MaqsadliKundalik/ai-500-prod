@@ -1,0 +1,176 @@
+# Render Blueprint for AI-500 Backend
+# ====================================
+# This file defines all services needed for Render deployment
+
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: ai500-postgres
+    env: docker
+    plan: free  # Change to 'starter' or higher for production
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ai500-db
+          property: connectionString
+      - key: POSTGRES_USER
+        value: postgres
+      - key: POSTGRES_PASSWORD
+        generateValue: true
+      - key: POSTGRES_DB
+        value: ai500
+
+  # Redis Cache
+  - type: redis
+    name: ai500-redis
+    plan: free  # Change to 'starter' or higher for production
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []  # Empty = allow all
+
+  # Backend API Service
+  - type: web
+    name: ai500-backend
+    env: docker
+    plan: free  # Change to 'starter' (512 MB) or 'standard' (2 GB) for production
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeploy: true
+    branch: main
+    healthCheckPath: /health
+    envVars:
+      # Database
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ai500-db
+          property: connectionString
+      
+      # Redis
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ai500-redis
+          property: connectionString
+      
+      # Application
+      - key: APP_ENV
+        value: production
+      - key: APP_NAME
+        value: AI-500 Pharma Assistant
+      - key: APP_VERSION
+        value: 1.0.0
+      - key: API_PREFIX
+        value: /api/v1
+      
+      # Security (Auto-generate these in Render dashboard)
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 30
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: 7
+      
+      # CORS (Update with your frontend domain)
+      - key: CORS_ORIGINS
+        value: https://your-frontend.onrender.com,http://localhost:3000
+      
+      # Upload Settings
+      - key: UPLOAD_DIR
+        value: /opt/render/project/src/uploads
+      - key: MAX_UPLOAD_SIZE_MB
+        value: 10
+      
+      # AI Models - Use Render disk for persistent storage
+      - key: PILL_RECOGNITION_MODEL_PATH
+        value: /opt/render/project/src/models/pill_recognition.pt
+      - key: DDI_MODEL_PATH
+        value: /opt/render/project/src/models/biobert_ddi_model.pt
+      - key: PRICE_ANOMALY_MODEL_PATH
+        value: /opt/render/project/src/models/price_anomaly_model.joblib
+      - key: TEXT_CLASSIFIER_MODEL_PATH
+        value: /opt/render/project/src/models/uzbek_text_classifier
+      - key: NLU_MODEL_PATH
+        value: /opt/render/project/src/models/uzbek_nlu_model
+      
+      # Model URLs - S3 or CDN links for large models
+      - key: PILL_RECOGNITION_MODEL_URL
+        value: https://your-s3-bucket.s3.amazonaws.com/models/pill_recognition.pt
+      - key: DDI_MODEL_URL
+        value: https://your-s3-bucket.s3.amazonaws.com/models/biobert_ddi_model.pt
+      
+      # Model Configuration
+      - key: PILL_CONFIDENCE_THRESHOLD
+        value: 0.7
+      - key: DDI_CONFIDENCE_THRESHOLD
+        value: 0.75
+      - key: PRICE_ANOMALY_THRESHOLD
+        value: 0.8
+      
+      # Feature Flags
+      - key: ENABLE_PILL_RECOGNITION
+        value: true
+      - key: ENABLE_DRUG_INTERACTION
+        value: true
+      - key: ENABLE_PRICE_ANOMALY
+        value: true
+      - key: ENABLE_VOICE_ASSISTANT
+        value: true
+      - key: ENABLE_BARCODE_SCAN
+        value: true
+      - key: ENABLE_BATCH_RECALL
+        value: true
+      
+      # External APIs
+      - key: FDA_API_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: FDA_API_URL
+        value: https://api.fda.gov/drug/enforcement.json
+      - key: FDA_RATE_LIMIT_PER_MINUTE
+        value: 240
+      - key: WHO_API_URL
+        value: https://mednet-communities.net/api/recalls
+      - key: WHO_MOCK_MODE
+        value: true
+      - key: UZ_MOH_API_URL
+        value: https://healthcare.gov.uz/api/recalls
+      - key: UZ_MOH_MOCK_MODE
+        value: true
+      
+      # Logging
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LOG_FORMAT
+        value: json
+      
+      # Sentry (Optional - set in dashboard)
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_ENVIRONMENT
+        value: production
+      - key: SENTRY_TRACES_SAMPLE_RATE
+        value: 0.1
+      
+      # Auto-run migrations and seeding
+      - key: RUN_MIGRATIONS
+        value: true
+      - key: SEED_DATABASE
+        value: true
+
+# Database Definition
+databases:
+  - name: ai500-db
+    databaseName: ai500
+    user: postgres
+    plan: free  # Change to 'starter' or higher for production
+
+# Disk for persistent storage (models, uploads)
+# Note: Free tier doesn't support disks, need Starter ($7/month) or higher
+# Uncomment when using paid plan:
+# disks:
+#   - name: ai500-storage
+#     mountPath: /opt/render/project/src
+#     sizeGB: 10

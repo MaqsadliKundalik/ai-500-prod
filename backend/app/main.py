@@ -15,6 +15,8 @@ from app.core.config import settings
 from app.api.v1.router import api_router
 from app.core.logging_config import setup_logging
 from app.core.middleware import RequestLoggingMiddleware
+from app.core.rate_limiter import limiter, rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from app.core.error_handlers import (
     sentinel_rx_exception_handler,
     validation_exception_handler,
@@ -104,6 +106,10 @@ def create_application() -> FastAPI:
     # Add GZip compression
     app.add_middleware(GZipMiddleware, minimum_size=1000)
     
+    # Add rate limiting
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+    
     # Add exception handlers
     app.add_exception_handler(SentinelRXException, sentinel_rx_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
@@ -127,10 +133,17 @@ def create_application() -> FastAPI:
     
     @app.get("/health", tags=["Health"])
     async def health_check():
-        """Detailed health check endpoint."""
+        """Detailed health check endpoint for monitoring and Render."""
         from app.db.session import async_session_maker
         from sqlalchemy import text
         from pathlib import Path
+        import os
+        
+        health_data = {
+            "status": "healthy",
+            "version": settings.app_version,
+            "environment": settings.environment
+        }
         
         # Check database connection
         db_status = "disconnected"
@@ -144,42 +157,49 @@ def create_application() -> FastAPI:
             db_status = "connected"
         except Exception as e:
             db_status = f"error: {str(e)[:50]}"
+            health_data["status"] = "degraded"
         
-        # Check Redis connection
+        health_data["database"] = {
+            "status": db_status,
+            "latency_ms": db_latency
+        }
+        
+        # Check Redis connection (optional, don't fail if not available)
         redis_status = "not_configured"
         try:
             import redis as redis_client
-            r = redis_client.Redis(host='redis', port=6379, db=0, socket_connect_timeout=1)
+            redis_host = os.getenv('REDIS_HOST', 'redis')
+            redis_port = int(os.getenv('REDIS_PORT', '6379'))
+            r = redis_client.Redis(host=redis_host, port=redis_port, db=0, socket_connect_timeout=1)
             r.ping()
             redis_status = "connected"
         except:
             redis_status = "not_configured"
         
-        # Check AI models
-        ai_models = {
-            "pill_recognition": Path("models/pill_recognition.pt").exists(),
-            "drug_interaction": Path("models/drug_interaction.pkl").exists(),
-            "price_anomaly": Path("models/price_anomaly.pkl").exists()
+        health_data["redis"] = {
+            "status": redis_status
         }
-        models_loaded = sum(ai_models.values())
-        ai_status = f"{models_loaded}/3 models available"
         
-        return {
-            "status": "healthy" if db_status == "connected" else "degraded",
-            "database": {
-                "status": db_status,
-                "latency_ms": db_latency
-            },
-            "redis": {
-                "status": redis_status
-            },
-            "ai_models": {
-                "status": ai_status,
-                "details": ai_models
-            },
-            "version": settings.app_version,
-            "environment": settings.environment
+        # Check AI models (optional, don't fail if not available)
+        model_paths = {
+            "pill_recognition": os.getenv('PILL_RECOGNITION_MODEL_PATH', 'models/pill_recognition.pt'),
+            "drug_interaction": os.getenv('DDI_MODEL_PATH', 'models/biobert_ddi_model.pt'),
+            "price_anomaly": os.getenv('PRICE_ANOMALY_MODEL_PATH', 'models/price_anomaly_model.joblib')
         }
+        
+        ai_models = {}
+        for name, path in model_paths.items():
+            ai_models[name] = Path(path).exists()
+        
+        models_loaded = sum(ai_models.values())
+        ai_status = f"{models_loaded}/{len(ai_models)} models available"
+        
+        health_data["ai_models"] = {
+            "status": ai_status,
+            "details": ai_models
+        }
+        
+        return health_data
     
     return app
 

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
 from app.core.dependencies import get_db, get_current_active_user, get_optional_user_id
+from app.core.validation import validate_search_query, validate_pagination
 from app.schemas.medication import (
     MedicationResponse,
     MedicationDetailResponse,
@@ -34,7 +35,18 @@ async def search_medications(
     
     - **q**: Search query (minimum 2 characters)
     - **limit**: Maximum results to return
+    
+    **Security:**
+    - SQL injection protection
+    - XSS prevention
+    - Input sanitization
     """
+    # Validate and sanitize search query
+    q = validate_search_query(q, min_length=2)
+    
+    # Validate pagination
+    _, limit = validate_pagination(0, limit, max_limit=100)
+    
     medication_service = MedicationService(db)
     results = await medication_service.search(q, limit)
     return results
