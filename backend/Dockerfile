@@ -4,7 +4,7 @@ FROM python:3.10-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies (build + runtime)
+# Install system dependencies (build + runtime) - Updated 2025-12-10
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
