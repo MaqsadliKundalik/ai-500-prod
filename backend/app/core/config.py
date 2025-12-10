@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     debug: bool = True
     environment: str = "development"
     log_level: str = "INFO"
+    disable_auth: bool = True  # Disable authentication for testing
     
     # ===========================================
     # SERVER
