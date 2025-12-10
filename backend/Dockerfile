@@ -30,8 +30,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application code
 COPY . .
 
-# Create necessary directories
-RUN mkdir -p /app/uploads /app/logs /app/models
+# Create necessary directories and set permissions for start script
+RUN mkdir -p /app/uploads /app/logs /app/models && \
+    chmod +x /app/start.sh
 
 # Create non-root user (Render compatible)
 RUN useradd -m -u 1000 appuser && \
@@ -46,10 +47,6 @@ EXPOSE 8000
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
-
-# Copy and set execute permissions for start script
-COPY start.sh /app/start.sh
-RUN chmod +x /app/start.sh
 
 # Run the application with startup script
 CMD ["/app/start.sh"]
