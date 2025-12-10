@@ -6,11 +6,19 @@ Detects and decodes barcodes and QR codes from images using OpenCV and pyzbar
 
 import cv2
 import numpy as np
-from pyzbar import pyzbar
 from typing import List, Dict, Optional, Tuple
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Try to import pyzbar, but make it optional for deployment
+try:
+    from pyzbar import pyzbar
+    PYZBAR_AVAILABLE = True
+except ImportError:
+    logger.warning("pyzbar not available - barcode scanning will be disabled")
+    PYZBAR_AVAILABLE = False
+    pyzbar = None
 
 
 class BarcodeDetector:
@@ -91,6 +99,10 @@ class BarcodeDetector:
     
     def _decode_from_image(self, image: np.ndarray) -> List[Dict]:
         """Decode barcodes from a preprocessed image."""
+        if not PYZBAR_AVAILABLE or pyzbar is None:
+            logger.warning("pyzbar not available - cannot decode barcodes")
+            return []
+            
         decoded_objects = pyzbar.decode(image)
         results = []
         
