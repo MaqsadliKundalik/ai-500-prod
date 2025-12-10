@@ -29,14 +29,13 @@ pydantic-settings==2.1.0
 email-validator==2.1.0
 
 # AI/ML Libraries
-# PyTorch CPU-only (smaller for Render deployment)
-torch==2.1.1+cpu --index-url https://download.pytorch.org/whl/cpu
-torchvision==0.16.1+cpu --index-url https://download.pytorch.org/whl/cpu
+torch==2.1.1
+torchvision==0.16.1
 scikit-learn==1.3.2  # Compatible with numpy<2
 pandas==2.1.3
 numpy==1.26.4  # Pinned for compatibility with pandas/sklearn/opencv
 networkx==3.2.1
-# ultralytics==8.0.200  # Commented out - large dependency, not critical for MVP
+ultralytics==8.0.200
 transformers==4.35.0  # For BERT models (drug interaction)
 datasets==2.14.0  # For training datasets
 
