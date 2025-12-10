@@ -93,6 +93,7 @@ async def get_current_user(
     # Bypass auth - return dummy user object
     if settings.disable_auth:
         from datetime import datetime
+        from app.models.user import UserRole, Language
         dummy_user = User(
             id=UUID("00000000-0000-0000-0000-000000000000"),
             email="demo@example.com",
@@ -101,12 +102,15 @@ async def get_current_user(
             hashed_password="",
             is_active=True,
             is_verified=True,
-            language="uz",
+            role=UserRole.USER,
+            language=Language.UZ,
             notifications_enabled=True,
+            reminder_time="09:00",
             theme="light",
             total_points=0,
             level=1,
             current_streak=0,
+            longest_streak=0,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
         )
