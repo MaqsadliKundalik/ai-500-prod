@@ -20,6 +20,26 @@ from app.services.pharmacy_service import PharmacyService
 router = APIRouter()
 
 
+@router.get("/", response_model=List[PharmacyResponse])
+async def list_pharmacies(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    📋 List all pharmacies.
+    
+    - **skip**: Number of records to skip (pagination)
+    - **limit**: Maximum results to return
+    
+    Returns:
+    - List of all pharmacies
+    """
+    pharmacy_service = PharmacyService(db)
+    pharmacies = await pharmacy_service.list_all(skip=skip, limit=limit)
+    return pharmacies
+
+
 @router.get("/nearby", response_model=List[PharmacyResponse])
 async def get_nearby_pharmacies(
     latitude: float = Query(..., ge=-90, le=90),

@@ -49,6 +49,18 @@ class PharmacyService:
             .where(Pharmacy.id == pharmacy_id)
             .where(Pharmacy.is_active == True)
         )
+        return result.scalar_one_or_none()
+    
+    async def list_all(self, skip: int = 0, limit: int = 20) -> List[Pharmacy]:
+        """List all active pharmacies with pagination."""
+        result = await self.db.execute(
+            select(Pharmacy)
+            .where(Pharmacy.is_active == True)
+            .offset(skip)
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+        )
         
         return result.scalar_one_or_none()
     

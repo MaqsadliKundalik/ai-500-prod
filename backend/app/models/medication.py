@@ -76,7 +76,6 @@ class Medication(BaseModel):
     pill_imprint = Column(String(100), nullable=True)  # Text/numbers on pill
     
     # Additional pill features for multi-modal recognition
-    shape = Column(String(50), nullable=True)  # Shape: round, oval, capsule, oblong
     color_primary = Column(String(50), nullable=True)  # Primary color
     color_secondary = Column(String(50), nullable=True)  # Secondary color (if any)
     imprint_code = Column(String(100), nullable=True, index=True)  # Imprint code (normalized)
