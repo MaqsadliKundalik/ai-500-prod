@@ -75,16 +75,6 @@ class Medication(BaseModel):
     pill_color = Column(String(50), nullable=True)  # white, blue, red
     pill_imprint = Column(String(100), nullable=True)  # Text/numbers on pill
     
-    # Additional pill features for multi-modal recognition
-    color_primary = Column(String(50), nullable=True)  # Primary color
-    color_secondary = Column(String(50), nullable=True)  # Secondary color (if any)
-    imprint_code = Column(String(100), nullable=True, index=True)  # Imprint code (normalized)
-    diameter_mm = Column(Float, nullable=True)  # Diameter in mm
-    length_mm = Column(Float, nullable=True)  # Length in mm (for capsules/oblong)
-    thickness_mm = Column(Float, nullable=True)  # Thickness in mm
-    has_score_line = Column(Boolean, default=False)  # Has dividing line
-    is_coated = Column(Boolean, default=False)  # Film-coated
-    
     # Status
     is_active = Column(Boolean, default=True)
     last_updated = Column(DateTime, default=datetime.utcnow)
