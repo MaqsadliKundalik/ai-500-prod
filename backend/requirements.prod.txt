@@ -1,5 +1,5 @@
-# Sentinel-RX Backend Dependencies - Production Minimal (Free Tier Compatible)
-# ==================================================
+# Sentinel-RX Backend Dependencies
+# ================================
 
 # Core Framework
 fastapi==0.104.1
@@ -15,29 +15,40 @@ geoalchemy2==0.14.2
 
 # Redis
 redis==5.0.1
+aioredis==2.0.1
 
 # Authentication & Security
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.1.1
+slowapi==0.1.9  # Rate limiting
 
 # Validation & Serialization
 pydantic==2.5.2
 pydantic-settings==2.1.0
 email-validator==2.1.0
 
-# Lightweight ML
-scikit-learn==1.3.2
+# AI/ML Libraries
+torch==2.1.1
+torchvision==0.16.1
+scikit-learn==1.3.2  # Compatible with numpy<2
 pandas==2.1.3
-numpy==1.26.2
+numpy==1.26.4  # Pinned for compatibility with pandas/sklearn/opencv
+networkx==3.2.1
+ultralytics==8.0.200
+transformers==4.35.0  # For BERT models (drug interaction)
+datasets==2.14.0  # For training datasets
 
-# OpenAI API (lightweight)
+# Voice Assistant
+openai-whisper==20231117
+gtts==2.4.0
 openai==1.3.7
 
-# Web APIs
+# Web Scraping & APIs
 requests==2.31.0
 httpx==0.25.2
 beautifulsoup4==4.12.2
+selenium==4.15.2
 
 # Geolocation
 geopy==2.4.1
@@ -45,11 +56,32 @@ geopy==2.4.1
 # Translation
 deep-translator==1.11.4
 
+# Background Tasks
+celery==5.3.4
+
 # Monitoring
+prometheus-client==0.19.0
 sentry-sdk[fastapi]==1.38.0
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+httpx==0.25.2
 
 # Development
 python-dotenv==1.0.0
+black==23.11.0
+isort==5.12.0
+flake8==6.1.0
 
-# Image Processing (lightweight)
+# Image Processing & Computer Vision
 Pillow==10.1.0
+opencv-python-headless==4.7.0.72  # Headless version for production (no GUI dependencies)
+pyzbar==0.1.9  # Barcode/QR code detection
+qrcode[pil]==8.2  # QR code generation for testing
+
+# OCR for Multi-Modal Pill Recognition
+easyocr==1.7.1  # Recommended for pill imprint reading
+pytesseract==0.3.10  # Alternative OCR backend
+# paddleocr==2.7.0  # Optional: High-accuracy OCR (larger dependency)
