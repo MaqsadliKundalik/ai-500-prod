@@ -60,9 +60,6 @@ class PharmacyService:
             .limit(limit)
         )
         return list(result.scalars().all())
-        )
-        
-        return result.scalar_one_or_none()
     
     async def find_nearby(
         self,
