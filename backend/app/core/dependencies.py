@@ -83,7 +83,24 @@ async def get_current_user(
     Raises:
         HTTPException: If user not found
     """
+    from app.core.config import get_settings
     from app.services.user_service import UserService
+    from app.models.user import User
+    from uuid import UUID
+    
+    settings = get_settings()
+    
+    # Bypass auth - return dummy user object
+    if settings.disable_auth:
+        dummy_user = User(
+            id=UUID("00000000-0000-0000-0000-000000000000"),
+            email="demo@example.com",
+            phone="+998901234567",
+            full_name="Demo User",
+            is_active=True,
+            is_verified=True
+        )
+        return dummy_user
     
     user_service = UserService(db)
     user = await user_service.get_by_id(user_id)
@@ -112,6 +129,13 @@ async def get_current_active_user(
     Raises:
         HTTPException: If user is disabled
     """
+    from app.core.config import get_settings
+    settings = get_settings()
+    
+    # Bypass auth - always return user as active
+    if settings.disable_auth:
+        return current_user
+    
     if not current_user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
