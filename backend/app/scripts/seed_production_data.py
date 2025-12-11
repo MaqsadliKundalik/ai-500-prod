@@ -551,14 +551,19 @@ def generate_pharmacies() -> List[Dict]:
             
             pharmacy = {
                 "name": f"{chain_name} - {city['name']} #{i+1}",
+                "chain": chain_name,
                 "address": f"{random.choice(streets)} ko'chasi, {street_num}, {city['name']}",
+                "city": city['name'],
                 "phone": f"+998 {random.randint(70, 99)} {random.randint(100, 999)} {random.randint(10, 99)} {random.randint(10, 99)}",
                 "latitude": lat,
                 "longitude": lon,
                 "rating": chain_info["rating"] + random.uniform(-0.3, 0.3),
                 "is_24_hours": chain_name == "DORIXONA 24/7" or random.random() < 0.2,
-                "has_parking": random.random() < 0.6,
+                "has_delivery": random.random() < 0.4,
+                "has_online_ordering": random.random() < 0.3,
                 "accepts_insurance": random.random() < 0.7,
+                "is_verified": random.random() < 0.8,
+                "is_active": True,
                 "chain_name": chain_name,
                 "price_multiplier": chain_info["multiplier"]
             }
