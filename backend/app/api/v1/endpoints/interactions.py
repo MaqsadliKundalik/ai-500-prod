@@ -5,7 +5,7 @@ Check drug-drug interactions, contraindications
 """
 
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db, get_current_active_user
@@ -43,6 +43,31 @@ async def check_interactions(
     
     interaction_service = InteractionService(db)
     result = await interaction_service.check_interactions(request.medication_ids)
+    
+    return result
+
+
+@router.get("/check", response_model=InteractionCheckResponse)
+async def check_interactions_get(
+    medication_ids: List[str] = Query(..., description="List of medication IDs"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    🔍 Check for drug-drug interactions (GET version).
+    
+    - **medication_ids**: List of medication IDs to check
+    
+    Returns:
+    - List of potential interactions
+    """
+    if len(medication_ids) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least 2 medications required for interaction check"
+        )
+    
+    interaction_service = InteractionService(db)
+    result = await interaction_service.check_interactions(medication_ids)
     
     return result
 
