@@ -29,7 +29,7 @@ from app.db.session import async_session_maker
 from app.models.user import User, UserRole, Language
 from app.models.medication import Medication
 from app.models.pharmacy import Pharmacy
-from app.models.interaction import Interaction, InteractionSeverity, InteractionType
+from app.models.interaction import DrugInteraction, SeverityLevel, InteractionType
 from app.core.security import get_password_hash
 
 
@@ -795,7 +795,7 @@ async def seed_interactions(
     print("\n⚠️  Seeding drug interactions...")
     
     # Check if already seeded
-    result = await db.execute(select(func.count(Interaction.id)))
+    result = await db.execute(select(func.count(DrugInteraction.id)))
     count = result.scalar()
     
     if count > 100:
@@ -816,10 +816,10 @@ async def seed_interactions(
         
         # Map severity strings to enum
         severity_map = {
-            "mild": InteractionSeverity.MILD,
-            "moderate": InteractionSeverity.MODERATE,
-            "severe": InteractionSeverity.SEVERE,
-            "fatal": InteractionSeverity.SEVERE
+            "mild": SeverityLevel.MINOR,
+            "moderate": SeverityLevel.MODERATE,
+            "severe": SeverityLevel.SEVERE,
+            "fatal": SeverityLevel.CONTRAINDICATED
         }
         
         type_map = {
@@ -827,11 +827,11 @@ async def seed_interactions(
             "pharmacokinetic": InteractionType.DRUG_DRUG,
         }
         
-        interaction = Interaction(
+        interaction = DrugInteraction(
             id=uuid4(),
             medication_id=med_id_map[drug1_name],
             interacting_medication_id=med_id_map[drug2_name],
-            severity=severity_map.get(severity, InteractionSeverity.MODERATE),
+            severity=severity_map.get(severity, SeverityLevel.MODERATE),
             description=description,
             interaction_type=type_map.get(interaction_type, InteractionType.DRUG_DRUG)
         )
