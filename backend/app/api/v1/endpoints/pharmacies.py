@@ -37,7 +37,28 @@ async def list_pharmacies(
     """
     pharmacy_service = PharmacyService(db)
     pharmacies = await pharmacy_service.list_all(skip=skip, limit=limit)
-    return pharmacies
+    
+    # Convert to response schema
+    return [
+        PharmacyResponse(
+            id=str(p.id),
+            name=p.name,
+            chain=p.chain,
+            address=p.address,
+            city=p.city,
+            latitude=p.latitude,
+            longitude=p.longitude,
+            distance_km=None,
+            phone=p.phone,
+            is_verified=p.is_verified,
+            is_24_hours=p.is_24_hours,
+            is_open=None,
+            rating=p.rating,
+            has_delivery=p.has_delivery,
+            image_url=p.image_url
+        )
+        for p in pharmacies
+    ]
 
 
 @router.get("/nearby", response_model=List[PharmacyResponse])
