@@ -37,14 +37,78 @@ from app.core.security import get_password_hash
 # MEDICATIONS DATA - 100+ Real Medications
 # ============================================================================
 
+def normalize_medication_data(data: Dict) -> Dict:
+    """Convert old format to new Medication model format."""
+    # Map old keys to new keys
+    normalized = {
+        "name": data.get("name"),
+        "generic_name": data.get("generic_name"),
+        "brand_name": data.get("brand_name"),
+        "description": data.get("description"),
+        "pill_shape": data.get("pill_shape"),
+        "pill_color": data.get("pill_color"),
+        "pill_imprint": data.get("pill_imprint"),
+    }
+    
+    # Handle dosage/strength
+    if "dosage" in data:
+        normalized["strength"] = data["dosage"]
+    elif "strength" in data:
+        normalized["strength"] = data["strength"]
+    
+    # Handle prescription
+    if "requires_prescription" in data:
+        normalized["prescription_required"] = data["requires_prescription"]
+    elif "prescription_required" in data:
+        normalized["prescription_required"] = data["prescription_required"]
+    
+    # Convert category to indications (list)
+    if "category" in data:
+        normalized["indications"] = [data["category"].lower()]
+    elif "indications" in data:
+        normalized["indications"] = data["indications"]
+    else:
+        normalized["indications"] = []
+    
+    # Convert side_effects to list
+    if "side_effects" in data:
+        se = data["side_effects"]
+        if isinstance(se, str):
+            normalized["side_effects"] = [s.strip() for s in se.split(",")]
+        else:
+            normalized["side_effects"] = se
+    
+    # Convert warnings to contraindications
+    if "warnings" in data:
+        warnings = data["warnings"]
+        if isinstance(warnings, str):
+            normalized["contraindications"] = [w.strip() for w in warnings.split(",")]
+        else:
+            normalized["contraindications"] = warnings
+    elif "contraindications" in data:
+        normalized["contraindications"] = data["contraindications"]
+    
+    # Dosage instructions
+    if "dosage_instructions" in data:
+        normalized["dosage_instructions"] = data["dosage_instructions"]
+    elif "dosage" in data:
+        normalized["dosage_instructions"] = f"Take {data['dosage']} as directed"
+    
+    return normalized
+
+
 MEDICATIONS_DATA = [
     # Pain Relievers & Anti-inflammatories
     {
         "name": "Aspirin", "generic_name": "Acetylsalicylic Acid",
-        "brand_name": "Bayer Aspirin", "category": "Pain Reliever",
+        "brand_name": "Bayer Aspirin",
         "description": "Anti-inflammatory, pain reliever, fever reducer, blood thinner",
-        "dosage": "75-325mg", "side_effects": "Stomach upset, bleeding risk",
-        "warnings": "Avoid with bleeding disorders", "requires_prescription": False,
+        "strength": "325mg",
+        "indications": ["pain", "fever", "inflammation", "cardiovascular protection"],
+        "side_effects": ["stomach upset", "bleeding risk", "bruising"],
+        "contraindications": ["bleeding disorders", "peptic ulcer", "hemophilia"],
+        "dosage_instructions": "Take 75-325mg daily with food",
+        "prescription_required": False,
         "pill_shape": "round", "pill_color": "white", "pill_imprint": "BAYER"
     },
     {
@@ -322,113 +386,114 @@ MEDICATIONS_DATA = [
 # Add 70 more medications for total 100+
 ADDITIONAL_MEDS = [
     # More cardiovascular
-    {"name": "Carvedilol", "generic_name": "Carvedilol", "category": "Beta Blocker", "requires_prescription": True},
-    {"name": "Losartan", "generic_name": "Losartan Potassium", "category": "ARB", "requires_prescription": True},
-    {"name": "Hydrochlorothiazide", "generic_name": "HCTZ", "category": "Diuretic", "requires_prescription": True},
-    {"name": "Clopidogrel", "generic_name": "Clopidogrel Bisulfate", "category": "Antiplatelet", "requires_prescription": True},
-    {"name": "Digoxin", "generic_name": "Digoxin", "category": "Cardiac Glycoside", "requires_prescription": True},
+    {"name": "Carvedilol", "generic_name": "Carvedilol", "category": "Beta Blocker", "prescription_required": True},
+    {"name": "Losartan", "generic_name": "Losartan Potassium", "category": "ARB", "prescription_required": True},
+    {"name": "Hydrochlorothiazide", "generic_name": "HCTZ", "category": "Diuretic", "prescription_required": True},
+    {"name": "Clopidogrel", "generic_name": "Clopidogrel Bisulfate", "category": "Antiplatelet", "prescription_required": True},
+    {"name": "Digoxin", "generic_name": "Digoxin", "category": "Cardiac Glycoside", "prescription_required": True},
     
     # More antibiotics
-    {"name": "Levofloxacin", "generic_name": "Levofloxacin", "category": "Antibiotic", "requires_prescription": True},
-    {"name": "Clindamycin", "generic_name": "Clindamycin HCl", "category": "Antibiotic", "requires_prescription": True},
-    {"name": "Metronidazole", "generic_name": "Metronidazole", "category": "Antibiotic", "requires_prescription": True},
-    {"name": "Trimethoprim", "generic_name": "Trimethoprim", "category": "Antibiotic", "requires_prescription": True},
-    {"name": "Nitrofurantoin", "generic_name": "Nitrofurantoin", "category": "Antibiotic", "requires_prescription": True},
+    {"name": "Levofloxacin", "generic_name": "Levofloxacin", "category": "Antibiotic", "prescription_required": True},
+    {"name": "Clindamycin", "generic_name": "Clindamycin HCl", "category": "Antibiotic", "prescription_required": True},
+    {"name": "Metronidazole", "generic_name": "Metronidazole", "category": "Antibiotic", "prescription_required": True},
+    {"name": "Trimethoprim", "generic_name": "Trimethoprim", "category": "Antibiotic", "prescription_required": True},
+    {"name": "Nitrofurantoin", "generic_name": "Nitrofurantoin", "category": "Antibiotic", "prescription_required": True},
     
     # More pain medications
-    {"name": "Tramadol", "generic_name": "Tramadol HCl", "category": "Opioid", "requires_prescription": True},
-    {"name": "Codeine", "generic_name": "Codeine Phosphate", "category": "Opioid", "requires_prescription": True},
-    {"name": "Morphine", "generic_name": "Morphine Sulfate", "category": "Opioid", "requires_prescription": True},
-    {"name": "Hydrocodone", "generic_name": "Hydrocodone", "category": "Opioid", "requires_prescription": True},
-    {"name": "Celecoxib", "generic_name": "Celecoxib", "category": "COX-2 Inhibitor", "requires_prescription": True},
+    {"name": "Tramadol", "generic_name": "Tramadol HCl", "category": "Opioid", "prescription_required": True},
+    {"name": "Codeine", "generic_name": "Codeine Phosphate", "category": "Opioid", "prescription_required": True},
+    {"name": "Morphine", "generic_name": "Morphine Sulfate", "category": "Opioid", "prescription_required": True},
+    {"name": "Hydrocodone", "generic_name": "Hydrocodone", "category": "Opioid", "prescription_required": True},
+    {"name": "Celecoxib", "generic_name": "Celecoxib", "category": "COX-2 Inhibitor", "prescription_required": True},
     
     # More GI medications
-    {"name": "Ranitidine", "generic_name": "Ranitidine HCl", "category": "H2 Blocker", "requires_prescription": False},
-    {"name": "Famotidine", "generic_name": "Famotidine", "category": "H2 Blocker", "requires_prescription": False},
-    {"name": "Pantoprazole", "generic_name": "Pantoprazole", "category": "PPI", "requires_prescription": True},
-    {"name": "Lansoprazole", "generic_name": "Lansoprazole", "category": "PPI", "requires_prescription": True},
-    {"name": "Bismuth", "generic_name": "Bismuth Subsalicylate", "category": "Antacid", "requires_prescription": False},
+    {"name": "Ranitidine", "generic_name": "Ranitidine HCl", "category": "H2 Blocker", "prescription_required": False},
+    {"name": "Famotidine", "generic_name": "Famotidine", "category": "H2 Blocker", "prescription_required": False},
+    {"name": "Pantoprazole", "generic_name": "Pantoprazole", "category": "PPI", "prescription_required": True},
+    {"name": "Lansoprazole", "generic_name": "Lansoprazole", "category": "PPI", "prescription_required": True},
+    {"name": "Bismuth", "generic_name": "Bismuth Subsalicylate", "category": "Antacid", "prescription_required": False},
     
     # More mental health
-    {"name": "Fluoxetine", "generic_name": "Fluoxetine HCl", "category": "SSRI", "requires_prescription": True},
-    {"name": "Paroxetine", "generic_name": "Paroxetine HCl", "category": "SSRI", "requires_prescription": True},
-    {"name": "Venlafaxine", "generic_name": "Venlafaxine HCl", "category": "SNRI", "requires_prescription": True},
-    {"name": "Duloxetine", "generic_name": "Duloxetine HCl", "category": "SNRI", "requires_prescription": True},
-    {"name": "Bupropion", "generic_name": "Bupropion HCl", "category": "Antidepressant", "requires_prescription": True},
-    {"name": "Lorazepam", "generic_name": "Lorazepam", "category": "Benzodiazepine", "requires_prescription": True},
-    {"name": "Clonazepam", "generic_name": "Clonazepam", "category": "Benzodiazepine", "requires_prescription": True},
-    {"name": "Diazepam", "generic_name": "Diazepam", "category": "Benzodiazepine", "requires_prescription": True},
+    {"name": "Fluoxetine", "generic_name": "Fluoxetine HCl", "category": "SSRI", "prescription_required": True},
+    {"name": "Paroxetine", "generic_name": "Paroxetine HCl", "category": "SSRI", "prescription_required": True},
+    {"name": "Venlafaxine", "generic_name": "Venlafaxine HCl", "category": "SNRI", "prescription_required": True},
+    {"name": "Duloxetine", "generic_name": "Duloxetine HCl", "category": "SNRI", "prescription_required": True},
+    {"name": "Bupropion", "generic_name": "Bupropion HCl", "category": "Antidepressant", "prescription_required": True},
+    {"name": "Lorazepam", "generic_name": "Lorazepam", "category": "Benzodiazepine", "prescription_required": True},
+    {"name": "Clonazepam", "generic_name": "Clonazepam", "category": "Benzodiazepine", "prescription_required": True},
+    {"name": "Diazepam", "generic_name": "Diazepam", "category": "Benzodiazepine", "prescription_required": True},
     
     # More diabetes
-    {"name": "Glyburide", "generic_name": "Glyburide", "category": "Sulfonylurea", "requires_prescription": True},
-    {"name": "Sitagliptin", "generic_name": "Sitagliptin", "category": "DPP-4 Inhibitor", "requires_prescription": True},
-    {"name": "Empagliflozin", "generic_name": "Empagliflozin", "category": "SGLT2 Inhibitor", "requires_prescription": True},
-    {"name": "Pioglitazone", "generic_name": "Pioglitazone", "category": "Thiazolidinedione", "requires_prescription": True},
+    {"name": "Glyburide", "generic_name": "Glyburide", "category": "Sulfonylurea", "prescription_required": True},
+    {"name": "Sitagliptin", "generic_name": "Sitagliptin", "category": "DPP-4 Inhibitor", "prescription_required": True},
+    {"name": "Empagliflozin", "generic_name": "Empagliflozin", "category": "SGLT2 Inhibitor", "prescription_required": True},
+    {"name": "Pioglitazone", "generic_name": "Pioglitazone", "category": "Thiazolidinedione", "prescription_required": True},
     
     # Respiratory
-    {"name": "Fluticasone", "generic_name": "Fluticasone Propionate", "category": "Corticosteroid", "requires_prescription": True},
-    {"name": "Budesonide", "generic_name": "Budesonide", "category": "Corticosteroid", "requires_prescription": True},
-    {"name": "Ipratropium", "generic_name": "Ipratropium Bromide", "category": "Bronchodilator", "requires_prescription": True},
-    {"name": "Tiotropium", "generic_name": "Tiotropium", "category": "Bronchodilator", "requires_prescription": True},
-    {"name": "Pseudoephedrine", "generic_name": "Pseudoephedrine HCl", "category": "Decongestant", "requires_prescription": False},
-    {"name": "Guaifenesin", "generic_name": "Guaifenesin", "category": "Expectorant", "requires_prescription": False},
-    {"name": "Dextromethorphan", "generic_name": "DXM", "category": "Cough Suppressant", "requires_prescription": False},
+    {"name": "Fluticasone", "generic_name": "Fluticasone Propionate", "category": "Corticosteroid", "prescription_required": True},
+    {"name": "Budesonide", "generic_name": "Budesonide", "category": "Corticosteroid", "prescription_required": True},
+    {"name": "Ipratropium", "generic_name": "Ipratropium Bromide", "category": "Bronchodilator", "prescription_required": True},
+    {"name": "Tiotropium", "generic_name": "Tiotropium", "category": "Bronchodilator", "prescription_required": True},
+    {"name": "Pseudoephedrine", "generic_name": "Pseudoephedrine HCl", "category": "Decongestant", "prescription_required": False},
+    {"name": "Guaifenesin", "generic_name": "Guaifenesin", "category": "Expectorant", "prescription_required": False},
+    {"name": "Dextromethorphan", "generic_name": "DXM", "category": "Cough Suppressant", "prescription_required": False},
     
     # Thyroid
-    {"name": "Levothyroxine", "generic_name": "Levothyroxine Sodium", "category": "Thyroid Hormone", "requires_prescription": True},
-    {"name": "Liothyronine", "generic_name": "Liothyronine", "category": "Thyroid Hormone", "requires_prescription": True},
-    {"name": "Methimazole", "generic_name": "Methimazole", "category": "Antithyroid", "requires_prescription": True},
+    {"name": "Levothyroxine", "generic_name": "Levothyroxine Sodium", "category": "Thyroid Hormone", "prescription_required": True},
+    {"name": "Liothyronine", "generic_name": "Liothyronine", "category": "Thyroid Hormone", "prescription_required": True},
+    {"name": "Methimazole", "generic_name": "Methimazole", "category": "Antithyroid", "prescription_required": True},
     
     # Antivirals
-    {"name": "Acyclovir", "generic_name": "Acyclovir", "category": "Antiviral", "requires_prescription": True},
-    {"name": "Valacyclovir", "generic_name": "Valacyclovir", "category": "Antiviral", "requires_prescription": True},
-    {"name": "Oseltamivir", "generic_name": "Oseltamivir", "category": "Antiviral", "requires_prescription": True},
+    {"name": "Acyclovir", "generic_name": "Acyclovir", "category": "Antiviral", "prescription_required": True},
+    {"name": "Valacyclovir", "generic_name": "Valacyclovir", "category": "Antiviral", "prescription_required": True},
+    {"name": "Oseltamivir", "generic_name": "Oseltamivir", "category": "Antiviral", "prescription_required": True},
     
     # Antifungals
-    {"name": "Fluconazole", "generic_name": "Fluconazole", "category": "Antifungal", "requires_prescription": True},
-    {"name": "Terbinafine", "generic_name": "Terbinafine HCl", "category": "Antifungal", "requires_prescription": True},
-    {"name": "Clotrimazole", "generic_name": "Clotrimazole", "category": "Antifungal", "requires_prescription": False},
+    {"name": "Fluconazole", "generic_name": "Fluconazole", "category": "Antifungal", "prescription_required": True},
+    {"name": "Terbinafine", "generic_name": "Terbinafine HCl", "category": "Antifungal", "prescription_required": True},
+    {"name": "Clotrimazole", "generic_name": "Clotrimazole", "category": "Antifungal", "prescription_required": False},
     
     # Hormones
-    {"name": "Estradiol", "generic_name": "Estradiol", "category": "Hormone", "requires_prescription": True},
-    {"name": "Progesterone", "generic_name": "Progesterone", "category": "Hormone", "requires_prescription": True},
-    {"name": "Testosterone", "generic_name": "Testosterone", "category": "Hormone", "requires_prescription": True},
-    {"name": "Prednisone", "generic_name": "Prednisone", "category": "Corticosteroid", "requires_prescription": True},
-    {"name": "Hydrocortisone", "generic_name": "Hydrocortisone", "category": "Corticosteroid", "requires_prescription": True},
+    {"name": "Estradiol", "generic_name": "Estradiol", "category": "Hormone", "prescription_required": True},
+    {"name": "Progesterone", "generic_name": "Progesterone", "category": "Hormone", "prescription_required": True},
+    {"name": "Testosterone", "generic_name": "Testosterone", "category": "Hormone", "prescription_required": True},
+    {"name": "Prednisone", "generic_name": "Prednisone", "category": "Corticosteroid", "prescription_required": True},
+    {"name": "Hydrocortisone", "generic_name": "Hydrocortisone", "category": "Corticosteroid", "prescription_required": True},
     
     # Eye/Ear medications
-    {"name": "Latanoprost", "generic_name": "Latanoprost", "category": "Glaucoma", "requires_prescription": True},
-    {"name": "Timolol", "generic_name": "Timolol", "category": "Glaucoma", "requires_prescription": True},
-    {"name": "Ciprofloxacin Drops", "generic_name": "Ciprofloxacin", "category": "Antibiotic Drops", "requires_prescription": True},
+    {"name": "Latanoprost", "generic_name": "Latanoprost", "category": "Glaucoma", "prescription_required": True},
+    {"name": "Timolol", "generic_name": "Timolol", "category": "Glaucoma", "prescription_required": True},
+    {"name": "Ciprofloxacin Drops", "generic_name": "Ciprofloxacin", "category": "Antibiotic Drops", "prescription_required": True},
     
     # More vitamins/supplements
-    {"name": "Calcium", "generic_name": "Calcium Carbonate", "category": "Supplement", "requires_prescription": False},
-    {"name": "Magnesium", "generic_name": "Magnesium Oxide", "category": "Supplement", "requires_prescription": False},
-    {"name": "Vitamin B12", "generic_name": "Cyanocobalamin", "category": "Vitamin", "requires_prescription": False},
-    {"name": "Vitamin B Complex", "generic_name": "B Vitamins", "category": "Vitamin", "requires_prescription": False},
-    {"name": "Iron", "generic_name": "Ferrous Sulfate", "category": "Supplement", "requires_prescription": False},
-    {"name": "Zinc", "generic_name": "Zinc Sulfate", "category": "Supplement", "requires_prescription": False},
-    {"name": "Omega-3", "generic_name": "Fish Oil", "category": "Supplement", "requires_prescription": False},
-    {"name": "Probiotics", "generic_name": "Lactobacillus", "category": "Supplement", "requires_prescription": False},
-    {"name": "Melatonin", "generic_name": "Melatonin", "category": "Supplement", "requires_prescription": False},
-    {"name": "Biotin", "generic_name": "Biotin", "category": "Vitamin", "requires_prescription": False},
-    {"name": "Folic Acid", "generic_name": "Folic Acid", "category": "Vitamin", "requires_prescription": False},
-    {"name": "Vitamin E", "generic_name": "Tocopherol", "category": "Vitamin", "requires_prescription": False},
-    {"name": "Vitamin K", "generic_name": "Phytonadione", "category": "Vitamin", "requires_prescription": False},
+    {"name": "Calcium", "generic_name": "Calcium Carbonate", "category": "Supplement", "prescription_required": False},
+    {"name": "Magnesium", "generic_name": "Magnesium Oxide", "category": "Supplement", "prescription_required": False},
+    {"name": "Vitamin B12", "generic_name": "Cyanocobalamin", "category": "Vitamin", "prescription_required": False},
+    {"name": "Vitamin B Complex", "generic_name": "B Vitamins", "category": "Vitamin", "prescription_required": False},
+    {"name": "Iron", "generic_name": "Ferrous Sulfate", "category": "Supplement", "prescription_required": False},
+    {"name": "Zinc", "generic_name": "Zinc Sulfate", "category": "Supplement", "prescription_required": False},
+    {"name": "Omega-3", "generic_name": "Fish Oil", "category": "Supplement", "prescription_required": False},
+    {"name": "Probiotics", "generic_name": "Lactobacillus", "category": "Supplement", "prescription_required": False},
+    {"name": "Melatonin", "generic_name": "Melatonin", "category": "Supplement", "prescription_required": False},
+    {"name": "Biotin", "generic_name": "Biotin", "category": "Vitamin", "prescription_required": False},
+    {"name": "Folic Acid", "generic_name": "Folic Acid", "category": "Vitamin", "prescription_required": False},
+    {"name": "Vitamin E", "generic_name": "Tocopherol", "category": "Vitamin", "prescription_required": False},
+    {"name": "Vitamin K", "generic_name": "Phytonadione", "category": "Vitamin", "prescription_required": False},
 ]
 
 # Merge additional meds with defaults
 for med in ADDITIONAL_MEDS:
     if 'description' not in med:
-        med['description'] = f"{med['category']} medication"
+        category = med.get('category', 'Medication')
+        med['description'] = f"{category} for various conditions"
     if 'brand_name' not in med:
         med['brand_name'] = med['name']
-    if 'dosage' not in med:
-        med['dosage'] = "As directed"
+    if 'strength' not in med and 'dosage' not in med:
+        med['strength'] = "As directed"
     if 'side_effects' not in med:
-        med['side_effects'] = "Consult healthcare provider"
-    if 'warnings' not in med:
-        med['warnings'] = "Follow prescriber instructions"
+        med['side_effects'] = ["Consult healthcare provider"]
+    if 'contraindications' not in med and 'warnings' not in med:
+        med['contraindications'] = ["Follow prescriber instructions"]
     if 'pill_shape' not in med:
         med['pill_shape'] = random.choice(['round', 'oval', 'capsule'])
     if 'pill_color' not in med:
@@ -644,7 +709,10 @@ async def seed_medications(db: AsyncSession) -> Dict[str, str]:
     created = 0
     
     for med_data in MEDICATIONS_DATA:
-        medication = Medication(**med_data)
+        # Normalize data to match model
+        normalized = normalize_medication_data(med_data)
+        
+        medication = Medication(**normalized)
         db.add(medication)
         await db.flush()
         med_id_map[med_data["name"]] = str(medication.id)
