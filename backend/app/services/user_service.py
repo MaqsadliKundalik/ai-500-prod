@@ -54,9 +54,17 @@ class UserService:
         """Create a new user."""
         from app.models.user import UserRole, Language
         
+        # Normalize phone number - remove country code prefix
+        phone = user_data.phone
+        if phone:
+            phone = phone.replace('+', '').replace(' ', '')
+            # Remove 998 prefix for Uzbekistan numbers
+            if phone.startswith('998') and len(phone) == 12:
+                phone = phone[3:]
+        
         user = User(
             email=user_data.email,
-            phone=user_data.phone,
+            phone=phone,
             hashed_password=get_password_hash(user_data.password),
             full_name=user_data.full_name,
             language=Language(user_data.language),  # Convert string to enum

@@ -131,7 +131,7 @@ def decode_token(token: str) -> Optional[dict]:
             detail="Token has expired. Please login again.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    except jwt.InvalidTokenError:
+    except jwt.JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token. Authentication failed.",
