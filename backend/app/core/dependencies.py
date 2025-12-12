@@ -46,10 +46,16 @@ async def get_current_user_id(
         HTTPException: If token is invalid or expired
     """
     from app.core.config import get_settings
+    import logging
+    
     settings = get_settings()
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f"Auth check: disable_auth={settings.disable_auth}, has_token={token is not None}, env={settings.environment}")
     
     # Bypass auth if disabled (for testing) or no token provided
     if settings.disable_auth or not token:
+        logger.warning(f"Auth bypassed: returning dummy user (disable_auth={settings.disable_auth})")
         return "00000000-0000-0000-0000-000000000000"  # Dummy user ID
     
     credentials_exception = HTTPException(
