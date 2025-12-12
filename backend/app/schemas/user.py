@@ -7,7 +7,7 @@ Request/Response models for user endpoints
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 
 
 class UserCreate(BaseModel):
@@ -45,6 +45,12 @@ class UserResponse(BaseModel):
     is_active: bool
     is_verified: bool
     created_at: datetime
+    
+    @field_validator("id", mode="before")
+    @classmethod
+    def convert_uuid_to_string(cls, v):
+        """Convert UUID to string."""
+        return str(v)
     
     model_config = ConfigDict(from_attributes=True, json_encoders={UUID: str})
 

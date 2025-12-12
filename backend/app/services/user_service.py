@@ -79,11 +79,18 @@ class UserService:
     
     async def update(self, user_id: str, user_data: UserUpdate) -> Optional[User]:
         """Update user profile."""
+        from app.models.user import Language
+        
         user = await self.get_by_id(user_id)
         if not user:
             return None
         
         update_data = user_data.model_dump(exclude_unset=True)
+        
+        # Convert language string to enum if present
+        if 'language' in update_data and update_data['language']:
+            update_data['language'] = Language(update_data['language'])
+        
         for field, value in update_data.items():
             setattr(user, field, value)
         
