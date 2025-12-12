@@ -26,10 +26,10 @@ class Settings(BaseSettings):
     # ===========================================
     app_name: str = "Sentinel-RX"
     app_version: str = "0.1.0"
-    debug: bool = True
-    environment: str = "development"
+    debug: bool = False
+    environment: str = "production"
     log_level: str = "INFO"
-    disable_auth: bool = True  # Disable authentication for testing
+    disable_auth: bool = False  # Enable authentication in production
     
     # ===========================================
     # SERVER
