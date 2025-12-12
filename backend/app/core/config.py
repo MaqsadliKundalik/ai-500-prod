@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     debug: bool = False
     environment: str = "production"
     log_level: str = "INFO"
-    disable_auth: bool = False  # Enable authentication in production
+    disable_auth: bool = False  # Authentication enabled for production
     
     # ===========================================
     # SERVER
