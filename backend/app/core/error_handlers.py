@@ -87,11 +87,28 @@ async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
     
     # Check for specific error types
     if isinstance(exc, IntegrityError):
+        error_msg = str(exc.orig) if hasattr(exc, 'orig') else str(exc)
+        
+        # Parse user-friendly messages for common constraints
+        if 'ix_users_email' in error_msg or 'users_email_key' in error_msg:
+            message = "Email address already registered. Please use a different email or login."
+            field = "email"
+        elif 'ix_users_phone' in error_msg or 'users_phone_key' in error_msg:
+            message = "Phone number already registered. Please use a different phone number or login."
+            field = "phone"
+        elif 'ix_medications_barcode' in error_msg:
+            message = "Barcode already exists in the system."
+            field = "barcode"
+        else:
+            message = "Data integrity constraint violated. This record may already exist."
+            field = None
+        
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,
             content={
                 "error": "IntegrityError",
-                "message": "Data integrity constraint violated",
+                "message": message,
+                "field": field,
                 "path": request.url.path
             }
         )
