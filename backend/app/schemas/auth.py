@@ -39,6 +39,12 @@ class UserResponse(BaseModel):
     is_active: bool
     is_verified: bool
     
+    @field_validator("id", mode="before")
+    @classmethod
+    def convert_uuid_to_string(cls, v):
+        """Convert UUID to string."""
+        return str(v)
+    
     class Config:
         from_attributes = True
 
