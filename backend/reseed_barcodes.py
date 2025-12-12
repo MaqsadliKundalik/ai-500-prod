@@ -104,16 +104,30 @@ async def update_barcodes():
         medications = result.scalars().all()
         
         updated = 0
+        skipped = 0
+        used_barcodes = set()
+        
         for med in medications:
             if med.name in PHARMACEUTICAL_BARCODES:
                 barcode = PHARMACEUTICAL_BARCODES[med.name]
+                
+                # Skip if barcode already assigned to another medication
+                if barcode in used_barcodes:
+                    skipped += 1
+                    print(f"   ⚠️  {med.name}: {barcode} (duplicate, skipping)")
+                    continue
+                
                 if med.barcode != barcode:
                     med.barcode = barcode
+                    used_barcodes.add(barcode)
                     updated += 1
                     print(f"   ✅ {med.name}: {barcode}")
+                else:
+                    used_barcodes.add(barcode)
         
         await db.commit()
         print(f"\n📊 Updated {updated} medications with barcodes")
+        print(f"   Skipped {skipped} duplicates")
         print(f"   Total medications: {len(medications)}")
         print(f"   With barcodes: {sum(1 for m in medications if m.barcode)}")
 
