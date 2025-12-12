@@ -39,8 +39,24 @@ async def sentinel_rx_exception_handler(request: Request, exc: SentinelRXExcepti
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Handle Pydantic validation errors."""
+    # Convert errors to JSON-serializable format
+    errors = []
+    for error in exc.errors():
+        error_dict = {
+            "type": error.get("type"),
+            "loc": error.get("loc"),
+            "msg": error.get("msg"),
+            "input": str(error.get("input")) if error.get("input") is not None else None,
+        }
+        # Convert ctx if present (may contain non-serializable objects)
+        if "ctx" in error:
+            error_dict["ctx"] = {
+                k: str(v) for k, v in error["ctx"].items()
+            }
+        errors.append(error_dict)
+    
     logger.warning(
-        f"Validation error: {exc.errors()}",
+        f"Validation error: {errors}",
         extra={
             "path": request.url.path,
             "method": request.method
@@ -52,7 +68,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content={
             "error": "ValidationError",
             "message": "Invalid request data",
-            "details": exc.errors(),
+            "details": errors,
             "path": request.url.path
         }
     )
