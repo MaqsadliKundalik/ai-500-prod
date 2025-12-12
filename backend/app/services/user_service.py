@@ -52,6 +52,8 @@ class UserService:
     
     async def create(self, user_data: UserCreate) -> User:
         """Create a new user."""
+        from app.models.user import UserRole
+        
         user = User(
             email=user_data.email,
             phone=user_data.phone,
@@ -66,7 +68,7 @@ class UserService:
             # Status defaults
             is_active=True,
             is_verified=False,
-            role="user"
+            role=UserRole.USER
         )
         
         self.db.add(user)
