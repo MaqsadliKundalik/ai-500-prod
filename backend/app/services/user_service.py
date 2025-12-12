@@ -61,7 +61,7 @@ class UserService:
         )
         
         self.db.add(user)
-        await self.db.flush()
+        await self.db.commit()
         await self.db.refresh(user)
         
         return user
@@ -77,7 +77,7 @@ class UserService:
             setattr(user, field, value)
         
         user.updated_at = datetime.utcnow()
-        await self.db.flush()
+        await self.db.commit()
         await self.db.refresh(user)
         
         return user
