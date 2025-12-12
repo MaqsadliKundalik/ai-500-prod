@@ -147,7 +147,7 @@ class UserService:
         member = FamilyMember(
             user_id=user_id,
             name=member_data.name,
-            relationship=member_data.relationship,
+            relation_type=member_data.relation_type,
             age=member_data.age,
             medical_conditions=member_data.medical_conditions,
             allergies=member_data.allergies,

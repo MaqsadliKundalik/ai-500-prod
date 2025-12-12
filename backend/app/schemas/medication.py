@@ -17,6 +17,7 @@ class MedicationResponse(BaseModel):
     name: str
     brand_name: Optional[str] = None
     generic_name: Optional[str] = None
+    barcode: Optional[str] = None
     dosage_form: Optional[str] = None
     strength: Optional[str] = None
     manufacturer: Optional[str] = None
@@ -33,6 +34,7 @@ class MedicationSearchResponse(BaseModel):
     name: str
     brand_name: Optional[str] = None
     generic_name: Optional[str] = None
+    barcode: Optional[str] = None
     dosage_form: Optional[str] = None
     strength: Optional[str] = None
     image_url: Optional[str] = None

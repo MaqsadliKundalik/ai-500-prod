@@ -86,7 +86,7 @@ class FamilyMemberCreate(BaseModel):
     """Schema for adding a family member."""
     
     name: str = Field(..., min_length=2, max_length=255)
-    relationship: str = Field(..., min_length=2, max_length=50)
+    relation_type: str = Field(..., min_length=2, max_length=50)
     age: Optional[int] = Field(None, ge=0, le=150)
     medical_conditions: List[str] = []
     allergies: List[str] = []
@@ -98,7 +98,7 @@ class FamilyMemberResponse(BaseModel):
     
     id: str
     name: str
-    relationship: str
+    relation_type: str
     age: Optional[int] = None
     avatar_url: Optional[str] = None
     medical_conditions: List[str] = []
@@ -106,8 +106,13 @@ class FamilyMemberResponse(BaseModel):
     pregnancy_status: Optional[str] = None
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    @field_validator("id", mode="before")
+    @classmethod
+    def convert_uuid_to_string(cls, v):
+        """Convert UUID to string."""
+        return str(v)
+    
+    model_config = ConfigDict(from_attributes=True, json_encoders={UUID: str})
 
 
 class FamilyMemberUpdate(BaseModel):
