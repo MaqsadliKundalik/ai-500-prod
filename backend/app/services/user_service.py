@@ -57,7 +57,16 @@ class UserService:
             phone=user_data.phone,
             hashed_password=get_password_hash(user_data.password),
             full_name=user_data.full_name,
-            language=user_data.language
+            language=user_data.language,
+            # Gamification defaults
+            total_points=0,
+            level=1,
+            current_streak=0,
+            longest_streak=0,
+            # Status defaults
+            is_active=True,
+            is_verified=False,
+            role="user"
         )
         
         self.db.add(user)
