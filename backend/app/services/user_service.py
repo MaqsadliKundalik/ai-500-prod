@@ -52,14 +52,14 @@ class UserService:
     
     async def create(self, user_data: UserCreate) -> User:
         """Create a new user."""
-        from app.models.user import UserRole
+        from app.models.user import UserRole, Language
         
         user = User(
             email=user_data.email,
             phone=user_data.phone,
             hashed_password=get_password_hash(user_data.password),
             full_name=user_data.full_name,
-            language=user_data.language,
+            language=Language(user_data.language),  # Convert string to enum
             # Gamification defaults
             total_points=0,
             level=1,
