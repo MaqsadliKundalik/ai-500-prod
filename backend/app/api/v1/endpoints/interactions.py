@@ -5,6 +5,7 @@ Check drug-drug interactions, contraindications
 """
 
 from typing import List
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -65,6 +66,16 @@ async def check_interactions_get(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="At least 2 medications required for interaction check"
         )
+    
+    # Validate UUIDs
+    for med_id in medication_ids:
+        try:
+            UUID(med_id)
+        except (ValueError, AttributeError):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid medication ID format: '{med_id}'. Must be a valid UUID."
+            )
     
     interaction_service = InteractionService(db)
     result = await interaction_service.check_interactions(medication_ids)

@@ -5,8 +5,9 @@ Request/Response models for interaction endpoints
 """
 
 from typing import Optional, List
+from uuid import UUID
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, ValidationError
 
 
 class SeverityLevel(str, Enum):
@@ -20,6 +21,17 @@ class InteractionCheckRequest(BaseModel):
     """Request to check drug interactions."""
     
     medication_ids: List[str] = Field(..., min_length=2)
+    
+    @field_validator('medication_ids')
+    @classmethod
+    def validate_uuids(cls, v: List[str]) -> List[str]:
+        """Validate that all medication IDs are valid UUIDs."""
+        for med_id in v:
+            try:
+                UUID(med_id)
+            except (ValueError, AttributeError):
+                raise ValueError(f"Invalid UUID format: {med_id}")
+        return v
 
 
 class InteractionResponse(BaseModel):

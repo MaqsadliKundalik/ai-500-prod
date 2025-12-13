@@ -7,6 +7,7 @@ User profile, settings, family members
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
 
 from app.core.dependencies import get_db, get_current_active_user
 from app.schemas.user import (
@@ -17,6 +18,9 @@ from app.schemas.user import (
     FamilyMemberResponse
 )
 from app.services.user_service import UserService
+from app.models.user import User
+from app.models.medication import Medication
+from app.models.scan import Scan
 
 router = APIRouter()
 
@@ -154,3 +158,38 @@ async def update_user_settings(
     user_service = UserService(db)
     await user_service.update_settings(current_user.id, settings)
     return {"message": "Settings updated"}
+
+
+@router.get("/stats")
+async def get_system_stats(
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    📊 Get system statistics (public endpoint).
+    
+    Returns:
+    - Total users
+    - Total medications
+    - Total scans
+    """
+    # Count users
+    user_count_query = select(func.count(User.id)).where(User.deleted_at.is_(None))
+    user_result = await db.execute(user_count_query)
+    total_users = user_result.scalar() or 0
+    
+    # Count medications
+    med_count_query = select(func.count(Medication.id)).where(Medication.deleted_at.is_(None))
+    med_result = await db.execute(med_count_query)
+    total_medications = med_result.scalar() or 0
+    
+    # Count scans
+    scan_count_query = select(func.count(Scan.id))
+    scan_result = await db.execute(scan_count_query)
+    total_scans = scan_result.scalar() or 0
+    
+    return {
+        "total_users": total_users,
+        "total_medications": total_medications,
+        "total_scans": total_scans,
+        "status": "operational"
+    }
